@@ -39,8 +39,9 @@ WavPack is David Bryant's audio compression format
 ([wavpack.com](https://www.wavpack.com), [dbry/WavPack](https://github.com/dbry/WavPack),
 BSD-3-Clause). This crate is an independent Rust implementation of the WavPack
 v5 bitstream, written for interoperability. It is not affiliated with or
-endorsed by the WavPack project. Portions will be derived from the BSD-3-Clause
-reference and ports; see [ATTRIBUTION.md](ATTRIBUTION.md) and
+endorsed by the WavPack project. Portions are derived from the BSD-3-Clause
+reference implementation at tag 5.9.0; see
+[ATTRIBUTION.md](ATTRIBUTION.md) and
 [PROVENANCE.md](PROVENANCE.md).
 
 ## License
