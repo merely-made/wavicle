@@ -1,6 +1,7 @@
 # Attribution
 
-wavicle's original code is dual-licensed MIT OR Apache-2.0. Portions are
+wavicle is licensed MPL-2.0 (see `LICENSE`), with the notice below retained;
+[`LICENSES.md`](LICENSES.md) is the provenance ledger. Portions are
 derived from the C reference implementation at
 [`dbry/WavPack` tag `5.9.0`](https://github.com/dbry/WavPack/tree/5.9.0),
 under its BSD-3-Clause license. [`PROVENANCE.md`](PROVENANCE.md) maps each

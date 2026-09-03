@@ -2,7 +2,7 @@
 name = "wavicle"
 version = "0.1.0"
 edition = "2024"
-license = "MIT OR Apache-2.0"
+license = "MPL-2.0"
 description = "A pure-Rust WavPack v5 codec: lossless decode and encode of 16/24/32-bit integer and 32-bit float, mono and stereo, bit-exact and verified against the reference."
 repository = "https://github.com/merely-made/wavicle"
 readme = "README.md"

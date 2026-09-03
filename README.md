@@ -56,7 +56,13 @@ Portions derive from the reference implementation at tag 5.9.0; see
 
 ## License
 
-MIT OR Apache-2.0.
+MPL-2.0 (see LICENSE).
+
+The codec modules are substantial derivatives of the BSD-3-Clause reference and
+carry MPL-2.0 with that notice retained; [LICENSES.md](LICENSES.md) is the
+provenance ledger, [ATTRIBUTION.md](ATTRIBUTION.md) holds the upstream notice
+verbatim. The published 0.1.0 keeps the MIT OR Apache-2.0 grant it shipped
+with; MPL-2.0 ships at the next functional bump.
 
 ---
 
