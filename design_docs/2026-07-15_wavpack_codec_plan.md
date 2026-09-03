@@ -526,3 +526,12 @@ that step:
   handles inputs of any length. The only remaining step before wavicle can
   back Hocket media is M6 (project_store .wav -> .wv wiring); the codec itself
   is feature-complete for the tiny profile.
+
+> **Superseded on licensing, 2026-09-03.** The lines above that keep
+> `MIT OR Apache-2.0` for our own SPDX record the July 2026 convention. The
+> 2026-08-22 license posture brief (mere `design_docs/2026-08-22_license_posture_brief.md`)
+> ruled MPL-2.0 by default with no exceptions, and the sweep landed on this
+> repository on 2026-09-03: every owned source carries Exhibit A and
+> `SPDX-License-Identifier: MPL-2.0`, the nine WavPack-derived modules keep
+> David Bryant's notice, and the published 0.1.0 keeps the grant it shipped
+> with. See `LICENSES.md`.
