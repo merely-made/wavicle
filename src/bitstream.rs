@@ -119,16 +119,17 @@ impl<'a> BitReader<'a> {
     /// terminator). Mirrors the portable variant in `read_words.c`.
     pub fn read_ones_count(&mut self, limit_ones: u32) -> Option<u32> {
         let mut ones_count = 0u32;
-        while ones_count < limit_ones + 1 && self.getbit() != 0 {
+        let terminal = limit_ones.checked_add(1)?;
+        while ones_count < terminal && self.getbit() != 0 {
             ones_count += 1;
         }
         if ones_count >= limit_ones {
-            if ones_count == limit_ones + 1 {
+            if ones_count == terminal {
                 return None;
             }
             // Escape: an Elias-gamma-style count follows.
             let decoded = self.read_egc_count()?;
-            ones_count = decoded + limit_ones;
+            ones_count = decoded.checked_add(limit_ones)?;
         }
         Some(ones_count)
     }
@@ -255,5 +256,29 @@ mod tests {
         assert_eq!(r.read_code(3), 2);
         assert_eq!(r.read_code(3), 1);
         assert_eq!(r.read_code(3), 3);
+    }
+
+    #[test]
+    fn escaped_ones_count_overflow_is_refused_without_wrapping() {
+        // 16 one-bits + zero is the escape prefix. A 32-bit Elias count
+        // supplies an implicit top bit and 31 literal low bits.
+        let escaped = |value: u32| {
+            let mut bits = vec![1u8; 16];
+            bits.push(0);
+            bits.extend([1; 32]);
+            bits.push(0);
+            bits.extend((0..31).map(|i| ((value >> i) & 1) as u8));
+            let mut bytes = vec![0u8; bits.len().div_ceil(8)];
+            for (i, bit) in bits.into_iter().enumerate() {
+                bytes[i / 8] |= bit << (i % 8);
+            }
+            bytes
+        };
+        assert_eq!(BitReader::new(&escaped(u32::MAX)).read_ones_count(16), None);
+        assert_eq!(
+            BitReader::new(&escaped(u32::MAX - 16)).read_ones_count(16),
+            Some(u32::MAX)
+        );
+        assert_eq!(BitReader::new(&[]).read_ones_count(u32::MAX), None);
     }
 }

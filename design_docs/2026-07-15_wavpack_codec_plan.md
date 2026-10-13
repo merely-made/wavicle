@@ -1,6 +1,6 @@
 # Founding plan: a pure-Rust WavPack codec crate
 
-**Status (2026-07-15): FOUNDED as `wavicle`; implementation not started.**
+**Status (2026-10-12): round-trip codec implemented; bounded malformed-input arithmetic repair landed for Woodshed capture storage.**
 Endorsed by Mark 2026-07-15; name decided the same day (his pick: Eddington's
 wave-particle portmanteau — a lossless codec makes audio both wave and bits,
 one identity in both observations; crates.io was free, `waver`/`wavelet` taken,
@@ -535,3 +535,29 @@ that step:
 > `SPDX-License-Identifier: MPL-2.0`, the nine WavPack-derived modules keep
 > David Bryant's notice, and the published 0.1.0 keeps the grant it shipped
 > with. See `LICENSES.md`.
+
+
+### 2026-10-12: Woodshed compressed-capture intake
+
+Woodshed's bounded lossless capture profile exposed concrete malformed-input
+arithmetic failures before CRC validation. Header parsing now checks `ck_size + 8`
+without overflow, and the entropy reader refuses an escaped count that cannot
+represent the added unary limit. Median updates and residual intervals use
+explicit reference-compatible unsigned wrapping; signed history expansion uses
+`unsigned_abs` and `wrapping_neg`, including the `INT32_MIN` result. These changes
+preserve the encoded format and ordinary decoded sample identities.
+
+Seven unit cases and fourteen existing fixture/round-trip cases pass with both
+codec features, including four new arithmetic regressions and the existing
+integer, float-bit-identity, multi-block, CRC and mutated-input cases. This is
+bounded evidence for the repaired paths, not a claim that arbitrary streams
+are fully certified. Runtime dependencies remain empty; inherited WavPack
+notices and MPL headers remain intact.
+
+The whole-stream decode API still allocates per audio block and does not enforce
+a consumer's total decoded-frame budget or all cross-block format constraints.
+Woodshed therefore preflights its own mono float32 profile, complete framing,
+contiguous indices, declared/actual frame sum, rates and resource bounds before
+calling the decoder. Its versioned companion envelope, namespace, sealing and
+session-last publication belong to Woodshed, not this codec. Hocket's independent
+pin is not changed by this intake.

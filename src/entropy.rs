@@ -42,27 +42,27 @@ impl Medians {
     // matching C's wrapping keeps encoder and decoder state bit-identical in
     // every case rather than panicking in a debug build.
     fn inc0(&mut self) {
-        let d = ((self.median[0] + DIV0) / DIV0).wrapping_mul(5);
+        let d = (self.median[0].wrapping_add(DIV0) / DIV0).wrapping_mul(5);
         self.median[0] = self.median[0].wrapping_add(d);
     }
     fn dec0(&mut self) {
-        let d = ((self.median[0] + (DIV0 - 2)) / DIV0).wrapping_mul(2);
+        let d = (self.median[0].wrapping_add(DIV0 - 2) / DIV0).wrapping_mul(2);
         self.median[0] = self.median[0].wrapping_sub(d);
     }
     fn inc1(&mut self) {
-        let d = ((self.median[1] + DIV1) / DIV1).wrapping_mul(5);
+        let d = (self.median[1].wrapping_add(DIV1) / DIV1).wrapping_mul(5);
         self.median[1] = self.median[1].wrapping_add(d);
     }
     fn dec1(&mut self) {
-        let d = ((self.median[1] + (DIV1 - 2)) / DIV1).wrapping_mul(2);
+        let d = (self.median[1].wrapping_add(DIV1 - 2) / DIV1).wrapping_mul(2);
         self.median[1] = self.median[1].wrapping_sub(d);
     }
     fn inc2(&mut self) {
-        let d = ((self.median[2] + DIV2) / DIV2).wrapping_mul(5);
+        let d = (self.median[2].wrapping_add(DIV2) / DIV2).wrapping_mul(5);
         self.median[2] = self.median[2].wrapping_add(d);
     }
     fn dec2(&mut self) {
-        let d = ((self.median[2] + (DIV2 - 2)) / DIV2).wrapping_mul(2);
+        let d = (self.median[2].wrapping_add(DIV2 - 2) / DIV2).wrapping_mul(2);
         self.median[2] = self.median[2].wrapping_sub(d);
     }
 }
@@ -168,7 +168,7 @@ impl WordsDecoder {
             let low_carry = self.holding_one;
             self.holding_one = raw_ones & 1;
             self.holding_zero = self.holding_one == 0;
-            let ones_count = (raw_ones >> 1) + low_carry;
+            let ones_count = (raw_ones >> 1).wrapping_add(low_carry);
 
             let c = &mut self.c[ch];
             let (mut low, high);
@@ -180,17 +180,17 @@ impl WordsDecoder {
                 low = c.get(0);
                 c.inc0();
                 if ones_count == 1 {
-                    high = low + c.get(1) - 1;
+                    high = low.wrapping_add(c.get(1)).wrapping_sub(1);
                     c.dec1();
                 } else {
-                    low += c.get(1);
+                    low = low.wrapping_add(c.get(1));
                     c.inc1();
                     if ones_count == 2 {
-                        high = low + c.get(2) - 1;
+                        high = low.wrapping_add(c.get(2)).wrapping_sub(1);
                         c.dec2();
                     } else {
-                        low += (ones_count - 2) * c.get(2);
-                        high = low + c.get(2) - 1;
+                        low = low.wrapping_add((ones_count - 2).wrapping_mul(c.get(2)));
+                        high = low.wrapping_add(c.get(2)).wrapping_sub(1);
                         c.inc2();
                     }
                 }
@@ -421,15 +421,18 @@ impl Default for WordsEncoder {
 /// back to a 32-bit integer, table-driven.
 #[cfg(feature = "decode")]
 pub fn wp_exp2s(log: i32) -> i32 {
-    if log < 0 {
-        return -wp_exp2s(-log);
-    }
-    let value = u32::from(EXP2_TABLE[(log & 0xff) as usize]) | 0x100;
-    let log = log >> 8;
-    if log <= 9 {
-        (value >> (9 - log)) as i32
+    let magnitude = log.unsigned_abs();
+    let value = u32::from(EXP2_TABLE[(magnitude & 0xff) as usize]) | 0x100;
+    let exponent = magnitude >> 8;
+    let expanded = if exponent <= 9 {
+        (value >> (9 - exponent)) as i32
     } else {
-        (value << ((log - 9) & 0x1f)) as i32
+        (value << ((exponent - 9) & 0x1f)) as i32
+    };
+    if log < 0 {
+        expanded.wrapping_neg()
+    } else {
+        expanded
     }
 }
 
@@ -465,5 +468,46 @@ mod tests {
         assert_eq!(wp_exp2s(0x100), 1);
         // Negation mirrors through the reference's ~(exp2s(-log) - 1) = -exp2s.
         assert_eq!(wp_exp2s(-0x100), -1);
+    }
+
+    #[test]
+    fn extreme_history_logs_and_median_updates_keep_reference_wrapping() {
+        // This signed-16-bit history log expands to INT32_MIN. Negating it
+        // must use the same modulo arithmetic as the reference integer path.
+        assert_eq!(wp_exp2s(-0x2000), i32::MIN);
+        assert_eq!(wp_exp2s(0x2000), i32::MIN);
+        let mut medians = Medians {
+            median: [u32::MAX; 3],
+        };
+        medians.inc0();
+        medians.dec0();
+        medians.inc1();
+        medians.dec1();
+        medians.inc2();
+        medians.dec2();
+        assert_eq!(medians.median, [u32::MAX; 3]);
+    }
+
+    #[test]
+    fn large_escaped_residual_range_is_bounded_without_arithmetic_panics() {
+        // Start with nonzero medians so no zero-run prefix is needed. The
+        // escape decodes raw_ones=64; its residual interval wraps uint32_t.
+        let mut bits = vec![1u8; 16];
+        bits.push(0);
+        bits.extend([1; 6]);
+        bits.push(0);
+        bits.extend([0, 0, 0, 0, 1]); // Elias count 48 + LIMIT_ONES = 64
+        bits.extend([0; 64]);
+        let mut bytes = vec![0u8; bits.len().div_ceil(8)];
+        for (i, bit) in bits.into_iter().enumerate() {
+            bytes[i / 8] |= bit << (i % 8);
+        }
+        let mut decoder = WordsDecoder::from_entropy_vars(&[0; 6], true).unwrap();
+        decoder.c[0].median = [u32::MAX; 3];
+        let mut buffer = [0i32; 1];
+        assert_eq!(
+            decoder.get_words_lossless(&mut BitReader::new(&bytes), &mut buffer, 1, true),
+            1
+        );
     }
 }

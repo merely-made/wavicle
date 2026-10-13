@@ -49,7 +49,11 @@ impl BlockHeader {
         }
         let le32 = |o: usize| u32::from_le_bytes(bytes[o..o + 4].try_into().expect("in range"));
         let ck_size = le32(4);
-        if ck_size + 8 > format::MAX_BLOCK_SIZE || ck_size < (HEADER_LEN as u32 - 8) {
+        if ck_size
+            .checked_add(8)
+            .is_none_or(|size| size > format::MAX_BLOCK_SIZE)
+            || ck_size < (HEADER_LEN as u32 - 8)
+        {
             return Err(Error::BadBlockSize(ck_size));
         }
         let version = u16::from_le_bytes([bytes[8], bytes[9]]);
@@ -236,5 +240,28 @@ impl StreamInfo {
         }
 
         info.ok_or(Error::Truncated { need: 32, have: 0 })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overflowing_block_size_is_refused_before_iteration() {
+        let mut bytes = [0u8; HEADER_LEN];
+        bytes[..4].copy_from_slice(&format::MAGIC);
+        bytes[8..10].copy_from_slice(&format::MAX_STREAM_VERS.to_le_bytes());
+        for size in [u32::MAX, u32::MAX - 7, format::MAX_BLOCK_SIZE] {
+            bytes[4..8].copy_from_slice(&size.to_le_bytes());
+            assert_eq!(
+                BlockHeader::parse(&bytes).unwrap_err(),
+                Error::BadBlockSize(size)
+            );
+            assert_eq!(
+                Blocks::new(&bytes).next().unwrap().unwrap_err(),
+                Error::BadBlockSize(size)
+            );
+        }
     }
 }
