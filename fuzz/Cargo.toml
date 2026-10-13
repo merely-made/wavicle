@@ -2,6 +2,7 @@
 # crate never pulls in libfuzzer-sys (nightly + sanitizer). Run with:
 #   cargo +nightly fuzz run decode
 [package]
+rust-version = "1.97.1"
 name = "wavicle-fuzz"
 version = "0.0.0"
 edition = "2021"
@@ -25,3 +26,6 @@ path = "fuzz_targets/decode.rs"
 test = false
 doc = false
 bench = false
+
+[workspace.package]
+rust-version = "1.97.1"
