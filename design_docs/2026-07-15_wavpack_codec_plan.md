@@ -1,13 +1,13 @@
 # Founding plan: a pure-Rust WavPack codec crate
 
-**Status (2026-10-12): round-trip codec implemented; bounded malformed-input arithmetic repair landed for Woodshed capture storage.**
+**Status (2026-10-31): round-trip codec implemented, M0-M6 landed; bounded malformed-input arithmetic repair landed for Woodshed capture storage (2026-10-12). Open gates are listed under Open work.**
 Endorsed by Mark 2026-07-15; name decided the same day (his pick: Eddington's
 wave-particle portmanteau — a lossless codec makes audio both wave and bits,
 one identity in both observations; crates.io was free, `waver`/`wavelet` taken,
 `waveshaper` rejected as another technique's name). This repo is the crate; the
 0.0.1 name claim is published. This doc migrated here from Hocket's design_docs
-(where an archived copy remains). First consumer: Hocket's media codec. Next
-milestone: M0 (block parse).
+(where an archived copy remains). First consumer: Hocket's media codec, wired
+2026-07-18 (M6).
 
 This doc predates the name in places; read `<codec>` as `wavicle`.
 
@@ -35,8 +35,8 @@ A standalone crate that losslessly decodes and encodes the WavPack v5 stream for
 mono and stereo PCM (16/24/32-bit integer and 32-bit float), pure Rust, no C,
 wasm-capable. Reference-compatible so real DAWs open the output, and bit-exact on
 32-bit float so Hocket's BLAKE3-over-decoded-samples media identity survives a
-round trip. Hocket's `hocket-engine` is the first consumer, swapping its `hound`
-WAV media codec for `.wv` entries.
+round trip. Hocket's `hocket-engine` (now `hocket-project` in Woodshed) is the first
+consumer, swapping its `hound` WAV media codec for `.wv` entries.
 
 ## The honest scope correction
 
@@ -95,7 +95,6 @@ project files, or BLAKE3. `hocket-engine` calls it over in-memory buffers.
     bitstream.rs     LSB-first word-oriented bit reader/writer        (always)
     block.rs         32-byte header parse/emit + block iterator       (always)
     metadata.rs      sub-block framing + ID dispatch                  (always)
-    sample.rs        sample buffers, bit-depth enum, channel layout   (always)
     decorr.rs        decorrelation: inverse (decode) + fixed forward (encode)
     entropy.rs       median-adaptive Rice-style model: decode + encode halves
     float.rs         f32 <-> WavPack float fields: decode + encode halves
@@ -106,12 +105,17 @@ project files, or BLAKE3. `hocket-engine` calls it over in-memory buffers.
   fuzz/                  cargo-fuzz target on the decoder (untrusted input)
 ```
 
+The planned `sample.rs` was never built: `DecodedStream` lives in
+`src/decode.rs` and `EncodeParams` in `src/encode.rs`, and `bitstream.rs` and
+`format.rs` hold the bit reader/writer and format constants.
+
 **Features.** One crate, two additive features, `decode` and `encode`. The framing
 modules build unconditionally. `decorr`/`entropy`/`float` each hold both directions
 behind `#[cfg(feature = ...)]`, because the forward and inverse transforms share
 constants and state and are far easier to keep in sync side by side. Default
 `["decode"]` during the decode-first ladder; promote to `["decode", "encode"]`
-once the encoder is oracle-clean. Hocket enables both.
+once the encoder is oracle-clean. Hocket enables both. Promoted 2026-10-31
+(wavpack_codec D3).
 
 **Dependencies: none at runtime, std-only.** No `build.rs`, no `cc`, no `cmake`.
 Dev-dependencies only: `blake3` for the identity gate, a minimal WAV reader for
@@ -125,6 +129,7 @@ I/O pushed to the caller, so `wasm32-unknown-unknown` builds on the same path as
 native. Done condition: the crate compiles for wasm in CI and a decode-then-BLAKE3
 round-trip runs in a headless wasm test.
 
+Historical: the name was decided 2026-07-15 as `wavicle` (see Status).
 **Name candidates** (crates.io-free as of 2026-07-15; Mark chooses, and a
 trademark/GitHub-org glance should precede the pick). Leaning into the family's
 medieval-music-and-manuscript strand where a codec is a compact written encoding
@@ -310,7 +315,9 @@ shared bug across our own encode and decode cannot pass itself.
   float scan requires it.
 - **M6 Hocket integration.** `hocket-engine` `project_store` writes `media/<hash>.wv`
   and reads it back, hash preserved; the `.hock` round-trip and `wvunpack`
-  cross-check pass.
+  cross-check pass. *Landed 2026-07-18* (Hocket `0d7e26c`; the code is now
+  `woodshed/crates/hocket-project/src/project_store.rs`); the `wvunpack` leg
+  was run 2026-10-31 (Progress).
 
 ## Risk register
 
@@ -338,7 +345,9 @@ shared bug across our own encode and decode cannot pass itself.
 
 ## Hocket integration (M6)
 
-`hocket-engine`'s `project_store.rs` currently encodes media as WAV via `hound`.
+`hocket-engine`'s `project_store.rs` (now
+`woodshed/crates/hocket-project/src/project_store.rs`) encoded media as WAV via
+`hound` before M6.
 M6 swaps that for `.wv` via `<codec>`: `media/<hash>.wv` entries, still hashed over
 the decoded `f32` samples so `MediaRef` identity is unchanged. Open decisions for
 that step:
@@ -352,19 +361,57 @@ that step:
 
 ## Open decisions for the maintainer
 
-- **Whether to build it at all, and when.** Deflate already gives Hocket the easy
+- *Resolved 2026-07-15: endorsed and founded (Status).* **Whether to build it at all, and when.** Deflate already gives Hocket the easy
   size wins (silence), so this is not urgent. It is a real ecosystem-first artifact
   and a good fit for the reference-oracle method, but it is retinue-scale work.
-- **The crate name** (shortlist above), and a trademark/GitHub-org check before
+- *Resolved 2026-07-15: `wavicle`.* **The crate name** (shortlist above), and a trademark/GitHub-org check before
   reserving it.
-- **Public sample API:** interleaved `i32`/`f32`, planar per-channel, or a
+- *Settled 2026-10-31 (D1).* **Public sample API:** interleaved `i32`/`f32`, planar per-channel, or a
   streaming `Read`/`Write` interface. This shapes how `hocket-engine` feeds the
   BLAKE3 hash and should be pinned before the `Decoder`/`Encoder` signatures freeze.
 - **Offer M1 (the decoder) to Symphonia** as an ecosystem contribution while
   keeping our own crate, or keep it entirely in-family (the retinue posture).
-- **Byte order for the float identity hash** (native vs little-endian), pinned to
+- *Settled 2026-10-31 (D2).* **Byte order for the float identity hash** (native vs little-endian), pinned to
   match what Hocket hashes, so the codec and consumer cannot disagree on identity
   while both being locally correct.
+
+## Decisions
+
+- **D1, the public sample API is interleaved slices (2026-10-31), settles an open decision:** Mark: "Ratify as shipped." Integer samples are interleaved `i32` and float samples interleaved `f32`: `decode_stream` returns `DecodedStream`, `encode_int(EncodeParams, &[i32])` and `encode_float(channels, sample_rate, &[f32])` take interleaved slices. Hocket already depends on this shape.
+
+  Links: area codec API · plans wavpack_codec · summary The public sample API is interleaved i32/f32 slices, as shipped.
+
+- **D2, the float identity hash is little-endian (2026-10-31), settles an open decision:** Mark: "Ratify as shipped." The BLAKE3 identity over decoded float samples hashes `to_le_bytes`, as wavicle's conformance tests and Hocket's `media.rs` both do.
+
+  Links: area codec API · plans wavpack_codec · summary Float identity hashes little-endian sample bytes.
+
+- **D3, both directions are default features (2026-10-31), refines the Features design:** Mark: "Promote to decode+encode." The encoder is oracle-clean, so `default = ["decode", "encode"]`; a reader-only build takes `default-features = false, features = ["decode"]`. Woodshed pins wavicle with explicit features and is unaffected.
+
+  Links: area build · plans wavpack_codec · summary Default features are decode and encode; either builds alone.
+
+## Open work (2026-10-31)
+
+Gates this plan specifies that were never built, collected from the sections
+above. None blocks the shipped codec.
+
+- Property tests (`proptest`) and a fixture WAV reader; dev-dependencies are
+  `blake3` only.
+- A headless wasm decode-then-BLAKE3 test; CI only compiles for wasm.
+- `wvunpack -mv` and `-ss` header assertions (bit depth, channels, float,
+  version 0x410) on encoder output in the test suite, and a direct assertion
+  that `wvx` opens when the float scan asks; the encode tests use
+  `wvunpack -r` only.
+- MD5 validation; `format.rs` defines the metadata IDs only.
+- `wvtest --default` and a pinned `wavpack` version in CI (the reference job
+  installs the unpinned distribution package).
+- Resynchronization over leading tags, deferred at M0 (`src/block.rs`).
+- A float-specials fuzz set; the fuzz target is decoder-only on arbitrary bytes.
+- Fixtures come from the reference encoder over deterministic PCM
+  (`tests/fixtures/gen.py`), not the seeded self-generated buffers planned.
+- Whether to offer the decoder to Symphonia (Open decisions).
+- `cargo clippy --all-targets -D warnings` fails on Rust 1.99.1
+  (`chunks_exact_to_as_chunks`, ten sites in `decode.rs`, `decorr.rs`,
+  `encode.rs`), so CI's clippy step is red since the 2026-10-18 toolchain move.
 
 ## Prior art and references
 
@@ -561,3 +608,28 @@ contiguous indices, declared/actual frame sum, rates and resource bounds before
 calling the decoder. Its versioned companion envelope, namespace, sealing and
 session-last publication belong to Woodshed, not this codec. Hocket's independent
 pin is not changed by this intake.
+
+### 2026-10-31: landings recorded, M6 cross-check, defaults promoted
+
+Landings from 2026-07-18 that this log had not recorded: non-standard sample
+rates via `ID_SAMPLE_RATE` (`9aa4688`); the five-pass fixed decorrelation
+cascade (`b423f6f`, `FIXED_DECORR` in `src/encode.rs`), which supersedes the
+M5 entry's single fixed term and brings sizes near the reference's, guarded by
+`encoded_size_is_reasonable_versus_raw_and_reference`; CI, the decoder fuzz
+target and robustness hardening (`faa3859`); release 0.1.0 (`4ac1134`). M6
+landed in Hocket the same day (`0d7e26c`).
+
+The M6 `wvunpack` leg was run against the pinned 5.9.0 CLI in
+`Code/testing/wavicle/tools`: Hocket's exact call, `encode_float(1, rate,
+samples)`, over a 4800-frame and a 200000-frame (multi-block) phrase at
+48000 Hz, a 70000-frame phrase at 37800 Hz and 40000 frames of silence at
+44100 Hz. Each verifies lossless under `wvunpack -mv`, reports 32-bit float
+mono at its rate under `-ss`, and `-r` returns bytes identical to the input
+`f32` little-endian samples. A copy with one corrupted byte fails `-v` with a
+CRC error.
+
+Default features promoted to `["decode", "encode"]` (D3); CI's bare
+`cargo test` leg became `--no-default-features --features decode` so the
+reader-only build stays covered. 7 unit and 14 conformance cases pass with
+the defaults and 7 and 9 reader-only, with the reference CLI on `PATH`;
+encode-only checks.

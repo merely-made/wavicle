@@ -23,7 +23,7 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --features encode --all-targets -- -D warnings
       - run: cargo test
-      - run: cargo test --features encode
+      - run: cargo test --no-default-features --features decode
       - run: cargo check --no-default-features --features encode
       - run: cargo check --features encode --target wasm32-unknown-unknown
 

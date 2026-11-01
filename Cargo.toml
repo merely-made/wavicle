@@ -12,9 +12,9 @@ categories = ["multimedia::audio", "compression"]
 exclude = ["design_docs/", "fuzz/", ".github/"]
 
 [features]
-# Decode-first: the default build is the reader (smaller, no encoder). Consumers
-# that write .wv (e.g. Hocket) enable `encode`.
-default = ["decode"]
+# Both directions by default now that the encoder is oracle-clean. A reader-only
+# build takes `default-features = false, features = ["decode"]`.
+default = ["decode", "encode"]
 decode = []
 encode = []
 

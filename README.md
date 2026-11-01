@@ -3,7 +3,7 @@
 A pure-Rust WavPack v5 codec: lossless, bit-exact decode and encode with no C
 anywhere in the build graph.
 
-## Status (2026-08-12)
+## Status (2026-10-31)
 
 Feature-complete for its declared scope; published on crates.io as
 `wavicle` 0.1.0 (2026-07-18).
@@ -19,14 +19,15 @@ Feature-complete for its declared scope; published on crates.io as
 - Multi-term decorrelation landed 2026-07-18, so encoded sizes roughly match
   the reference encoder.
 - `#![forbid(unsafe_code)]`, std-only, zero runtime dependencies, builds for
-  wasm32. Decode is the default feature; `encode` is additive.
+  wasm32. Decode and encode are both default features; either can be built
+  alone.
 
 In scope: the WavPack v5 stream, versions 0x402..=0x410 read, 0x410 written.
 Out of scope, rejected with clear errors: DSD, hybrid/lossy modes and `.wvc`
 correction files, more than two channels, pre-4.0 streams.
 
-The remaining planned milestone is consumer-side wiring in the sibling Hocket
-repo, not work here. The founding plan and conformance-oracle method live in
+Hocket stores its media as `.wv` through wavicle (wired 2026-07-18; Hocket now
+lives in Woodshed). The founding plan and conformance-oracle method live in
 [design_docs/2026-07-15_wavpack_codec_plan.md](design_docs/2026-07-15_wavpack_codec_plan.md).
 
 ## Use
@@ -36,8 +37,8 @@ stores audio phrases as `.wv` entries. Usable from any Rust project
 (including wasm) that needs WavPack without a C toolchain.
 
 ```sh
-cargo add wavicle                      # decode only (default)
-cargo add wavicle --features encode    # also write .wv
+cargo add wavicle                                                 # decode and encode (default)
+cargo add wavicle --no-default-features --features decode         # decode only
 ```
 
 API entry points: `decode_stream` (decode); `encode_int` / `encode_float`
