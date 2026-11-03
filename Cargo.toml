@@ -24,3 +24,10 @@ encode = []
 # The BLAKE3 identity gate mirrors the consumer's media-identity invariant:
 # blake3 over the decoded f32 bytes must survive the round trip.
 blake3 = "1"
+
+[lints.clippy]
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+missing_safety_doc = "warn"
+undocumented_unsafe_blocks = "warn"
+too_many_lines = "warn"
