@@ -185,11 +185,9 @@ across the workspace. Wavicle had 1 documents in `design_docs/` and no policy.
 Docs are flat in `design_docs/`; no area roots have been promoted yet, and
 core §4 says flat is the right default until one domain earns promotion.
 
-**Two core requirements are not yet met, and meeting them is the first doc work
-this repo owes:**
+**Current local status (2026-11-03):**
 
-- Core §6 requires `design_docs/DOC_README.md` as the canonical index. It does
-  not exist here yet; the 1 existing docs are unindexed.
-- Core §7 refers to `PROJECT_DESCRIPTION.md`, which does not exist here yet.
-  Until it does, the root `README.md` stands alone and §7's derivation rule is
-  inert rather than violated.
+- Core section 6's canonical [DOC_README.md](DOC_README.md) now indexes the
+  existing codec plan and its receipt, including the H7 source split.
+- PROJECT_DESCRIPTION.md remains reserved for the maintainer and absent.
+  Until it is authored, the root README remains the public overview.

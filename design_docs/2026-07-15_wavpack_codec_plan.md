@@ -633,3 +633,35 @@ Default features promoted to `["decode", "encode"]` (D3); CI's bare
 reader-only build stays covered. 7 unit and 14 conformance cases pass with
 the defaults and 7 and 9 reader-only, with the reference CLI on `PATH`;
 encode-only checks.
+
+
+## H7: conformance source groups (2026-11-03)
+
+**Status:** landed; 1/1 additional source path qualified.
+
+This bounded house-style pass splits `tests/conformance.rs` into existing
+fixture and round-trip responsibilities. It preserves reference fixtures,
+pinned oracle tools, bit identities, error variants, feature guards and test
+assertions. Mere's house-style plan owns H7's fifty-file aggregate and its
+shared 100 MB retained receipt cap; this codec contributes one original.
+
+The phase is done when the original and every child fit 600 physical lines,
+the exact exception retires, matching baseline/post default and reader-only
+suites and an encode-only check pass, the full local and actual commit hooks
+pass, and the source is committed and pushed. Oracle legs run when the pinned
+local CLI is available. These checks do not qualify physical audio devices
+or broaden codec formats. Existing M0-M6 open gates retain their scopes.
+
+### H7 findings
+
+- 2026-11-03: the sole remaining exception has independent decode, encode
+  and malformed/round-trip regression groups; original captured bytes stay.
+- Compact run evidence appends to
+  `archive_docs/receipts/2026-07-15_wavpack_codec_plan_receipts.md`.
+
+### H7 progress
+
+- 2026-11-03: selected the 882-line conformance source from clean main;
+  baseline checks precede its edits.
+
+- 2026-11-03: H7 conformance split lands: the original is 382 lines and encoding fixtures are 510; its exception retires. Default/reader-only inventories match baseline, encode-only and docs checks and full/commit hooks pass. Existing codec acceptance gates are unchanged.
